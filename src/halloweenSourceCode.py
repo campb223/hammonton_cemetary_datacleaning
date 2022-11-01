@@ -9,6 +9,7 @@ from cmath import nan
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from dateutil.parser import parse
 #import matplotlib as plt
 
 def printData(dfa, dfb, dfc):
@@ -152,20 +153,33 @@ def formatGender(df):
     return df
 
 def updateDates(df):
-    # I've identified at least the following formats:
-    #   NaN, 1930, jan 14 1947, 04-03-1921
-    #   These seem to be a typo
-    #       Feb 41993 (we'll assume this to be Feb 4 1993)
-    #       02/14/000 (we'll assume this to 02/14/1900)
+    """The function is intended to update the date for DOB and DOD on the provided dataframe. 
     
-    #   If only a year is provided we will format it to 01/01/yyyy
-    #   If only month and year are provided we will format it to mm/01/yyyy
+    I've identified at least the following formats to be present:
+       NaN, 1930, jan 14 1947, 04-03-1921, Jan 1980
+    
+    These seem to be a typo
+        Feb 41993 (we'll assume this to be Feb 4 1993)
+        02/14/000 (we'll assume this to 02/14/1900)
+    
+    If only a year is provided we will format it to 01/01/yyyy
+    If only month and year are provided we will format it to mm/01/yyyy
+
+    Args:
+        df (Pandas DataFrame): Accepts a dataframe with varying date formats for DOB and DOD
+
+    Returns:
+        df (Pandas DataFrame): Returns a dataframe with the DOB and DOD consistently updated to mm/dd/yyyy
+    """
     
     newDOB = []
     newDOD = []
     
+    # Loop through each DOB
     for dateOfBirth in df["DOB"]:
+        # Make each DOB a string
         dateOfBirth = str(dateOfBirth)
+        # If the DOB appears to be a typo, we'll correct it first then continue to loop. 
         if dateOfBirth == "02/14/000":
             newDOB.append(datetime.strptime("02/14/1900", '%m/%d/%Y'))
             continue
@@ -176,29 +190,61 @@ def updateDates(df):
             newDOB.append(datetime.strptime("04/03/1921", '%m/%d/%Y'))
             continue
             
+        # Here we'll remove any leading white spaces on the DOB
         dateOfBirth = str(dateOfBirth).lstrip()
-        #print(dateOfBirth)
 
+        # If the DOB is null -- add an empty entry
         if pd.isna(str(dateOfBirth)) or dateOfBirth == "nan":
             newDOB.append("")
+        # If the length of the string = 4, we'll assume only a year is provided and return 01/01/yyyy
         elif len(str(dateOfBirth)) == 4:
             dateOfBirth = "01/01/" + dateOfBirth
             newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
+        # Otherwise we'll need to do some additional formatting to get mm/dd/yyyy
         else:
+            # Attempting to just convert to mm/dd/yyyy
             try:
                 newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
             except:
                 try:
-                    dateOfBirth = str(dateOfBirth).capitalize()
-                    strSplit = dateOfBirth.split()
-                    dateOfBirth = strSplit[0] + "/" + strSplit[1] + "/" + strSplit[2]
-                    print(dateOfBirth + " hit here")
-                    newDOB.append(datetime.strptime(dateOfBirth, '%b/%d/%Y'))
+                    newDOB.append(datetime.strptime(str(dateOfBirth), '%b/%d/%Y'))
                 except:
-                    newDOB.append(datetime.strptime(str(dateOfBirth), '%B/%d/%Y'))
-                    
+                    # If that failed, try to capitalize the first letter and see how many times it split
+                    tempDateOfBirth = str(dateOfBirth).capitalize()
+                    strSplit = tempDateOfBirth.split()
+                    # If split = 2 then it's like Sept 1900
+                    if len(strSplit) == 2:
+                        if(strSplit[0] == "Sept"):
+                            tempDateOfBirth = "Sep"
+                            newTempStr = tempDateOfBirth + "/01/" + strSplit[1]
+                        else:
+                            newTempStr = strSplit[0] + "/01/" + strSplit[1]
+                        try:
+                            newDOB.append(datetime.strptime(newTempStr, '%b/%d/%Y'))
+                        except:
+                            newDOB.append(datetime.strptime(newTempStr, '%B/%d/%Y'))
+                            continue
+                    elif len(strSplit) == 3:
+                        try:
+                            if len(strSplit[1]) == 2:
+                                newTempStr = strSplit[0] + "/" + strSplit[1][0] + strSplit[1][1]  + "/" + strSplit[2]
+                            else:
+                                newTempStr = strSplit[0] + "/0" + strSplit[1][0] + "/" + strSplit[2]
+                            newDOB.append(datetime.strptime(str(newTempStr), '%b/%d/%Y'))
+                        except:
+                            newDOB.append(datetime.strptime(str(newTempStr), '%B/%d/%Y'))
+                                            
     for dateOfDeath in df["DOD"]:
-        if pd.isna(dateOfDeath):
+        print(dateOfDeath)
+        
+        # If the DOB appears to be a typo, we'll correct it first then continue to loop. 
+        if dateOfDeath == "11/00/0000":
+            newDOD.append("")
+            continue
+        
+        dateOfDeath = str(dateOfDeath).lstrip()
+        
+        if pd.isna(dateOfDeath) or dateOfDeath == "nan":
             newDOD.append("")
         elif len(dateOfDeath) == 4:
             dateOfDeath = "01/01/" + dateOfDeath
@@ -206,9 +252,13 @@ def updateDates(df):
         else:
             newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
     
+    # Now we can update our DOB and DOD with our formatted datetime objects. 
     df["DOB"] = pd.DataFrame(newDOB)
     df["DOD"] = pd.DataFrame(newDOD)
+    
+    # Finally return the dataframe
     return df
+        
 
 def addLifespan(df):
     """This function takes in a dataframe, adds a column calcuating the death-birth to generate a lifespan. Then returns the new dataframe
@@ -274,12 +324,12 @@ def main():
     df = formatGender(df)
     
     # Our dates are very inconsistent, let's make everything a standard format of mm/dd/yyyy
-    #df = updateDates(df)
+    df = updateDates(df)
     
     # Now let's create a new column that calculates the individuals lifespan
-    df = addLifespan(df)
+    #df = addLifespan(df)
     
-    print(df.to_string())
+    #print(df.to_string())
 
     
     
