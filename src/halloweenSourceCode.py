@@ -235,7 +235,6 @@ def updateDates(df):
                             newDOB.append(datetime.strptime(str(newTempStr), '%B/%d/%Y'))
                                             
     for dateOfDeath in df["DOD"]:
-        print(dateOfDeath)
         
         # If the DOB appears to be a typo, we'll correct it first then continue to loop. 
         if dateOfDeath == "11/00/0000":
@@ -250,7 +249,37 @@ def updateDates(df):
             dateOfDeath = "01/01/" + dateOfDeath
             newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
         else:
-            newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
+            # Attempting to just convert to mm/dd/yyyy
+            try:
+                newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
+            except:
+                try:
+                    newDOD.append(datetime.strptime(str(dateOfDeath), '%b/%d/%Y'))
+                except:
+                    # If that failed, try to capitalize the first letter and see how many times it split
+                    tempDateOfDeath = str(dateOfDeath).capitalize()
+                    strSplit = tempDateOfDeath.split()
+                    # If split = 2 then it's like Sept 1900
+                    if len(strSplit) == 2:
+                        if(strSplit[0] == "Sept"):
+                            tempDateOfDeath = "Sep"
+                            newTempStr = tempDateOfDeath + "/01/" + strSplit[1]
+                        else:
+                            newTempStr = strSplit[0] + "/01/" + strSplit[1]
+                        try:
+                            newDOD.append(datetime.strptime(newTempStr, '%b/%d/%Y'))
+                        except:
+                            newDOD.append(datetime.strptime(newTempStr, '%B/%d/%Y'))
+                            continue
+                    elif len(strSplit) == 3:
+                        try:
+                            if len(strSplit[1]) == 2:
+                                newTempStr = strSplit[0] + "/" + strSplit[1][0] + strSplit[1][1]  + "/" + strSplit[2]
+                            else:
+                                newTempStr = strSplit[0] + "/0" + strSplit[1][0] + "/" + strSplit[2]
+                            newDOD.append(datetime.strptime(str(newTempStr), '%b/%d/%Y'))
+                        except:
+                            newDOD.append(datetime.strptime(str(newTempStr), '%B/%d/%Y'))
     
     # Now we can update our DOB and DOD with our formatted datetime objects. 
     df["DOB"] = pd.DataFrame(newDOB)
@@ -329,7 +358,7 @@ def main():
     # Now let's create a new column that calculates the individuals lifespan
     #df = addLifespan(df)
     
-    #print(df.to_string())
+    print(df.to_string())
 
     
     
