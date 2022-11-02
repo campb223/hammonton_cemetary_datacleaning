@@ -10,31 +10,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from dateutil.parser import parse
+from dateutil import relativedelta
 #import matplotlib as plt
 
-def printData(dfa, dfb, dfc):
-    # Print an identifier to the file -- data -- new line (to seperate the data for easier reading)
-    """To initally view the data from three provided dataframes the function accepts the dataframes, prints which
-    file it is, the head of the data, then a new line, and repeats for the other two dataframes.
-
-    Args:
-        dfa (Pandas DataFrame): Data from halloween2019a.csv
-        dfb (Pandas DataFrame): Data from halloween2019b.csv
-        dfc (Pandas DataFrame): Data from halloween2019c.csv
-    """
-    
-    print('2019a \n')
-    print(dfa.head().to_string()) 
-    print('\n')
-
-    print('2019b \n')
-    print(dfb.head().to_string()) 
-    print('\n')
-
-    print('2019c \n')
-    print(dfc.head().to_string()) 
-    print('\n')
-    
 def splitNamesColumn(dfc):
     """In the dataframe provived there is one column labeled "Name" -- this function grabs the first and last (if available) names,
     creates a new dataframe with two columns "firstName" and "lastName" and returns that dataframe.
@@ -300,15 +278,20 @@ def addLifespan(df):
     """
     
     lifespan = []
-    birth = []
-    death = []
+    counter = 0
     
     for dateOfBirth in df["DOB"]:
-        birth.append(dateOfBirth)
-    for dateOfDeath in df["DOD"]:
-        death.append(dateOfDeath)
-    #lifespan.append(dateOfDeath - dateOfBirth)
-    #df["Lifespan"] = pd.DataFrame(lifespan)
+        # Grab the DOB and DOD as variables
+        birth = df["DOB"][counter]
+        death = df["DOD"][counter]
+        # Find the difference in death - birth
+        diff = relativedelta.relativedelta(death, birth)
+        # Save the difference in years
+        lifespan.append(diff.years)
+        counter += 1
+    
+    # Finally we can add the lifespan as a new column and return the dataframe
+    df["Lifespan"] = pd.DataFrame(lifespan)
     return df
 
 
@@ -318,14 +301,11 @@ def main():
     dfb = pd.read_csv('data\halloween2019b.csv')
     dfc = pd.read_csv('data\halloween2019c.csv')
     
-    # OPTIONAL FOR FINAL CODE -- If you would like to see the head of each dataframe -- uncomment the next line
-    #printData(dfa, dfb, dfc)
-    
     # Our data is in the following formats:
     #             halloween2019a.csv            #           halloween2019b.csv           #   halloween2019c.csv 
     #   FirstName,MiddleName,LastName,DOB,DOD   #   FirstName, LastName, DOB, DOD, Sex   #    Name,DOB,DOD,Sex
     
-    # Let's prepare a format that's consitent which disregards any middle names (firstName, lastName, DOB, DOD, Sex)
+    # Let's prepare a format that's consitent which disregards any middle names (firstName,lastName,DOB,DOD,Sex)
     
     # Removing MiddleName from dataframe A
     dfa.pop("MiddleName")
@@ -344,9 +324,6 @@ def main():
     
     # Now that each of our dataframes are in the desired format -- let's merge them into one dataframe
     df = pd.concat([dfa, dfb, dfc], ignore_index=True)
-
-    # OPTIONAL FOR FINAL CODE -- If you would ilke to see all of the data listed, uncomment the next line
-    #print(df.to_string())
     
     # Some results have 'Male'/'Female' whereas some have 'm'/'M'/'f'/'F' 
     # For consistency, let's make these either 'M' or 'F'
@@ -355,14 +332,17 @@ def main():
     # Our dates are very inconsistent, let's make everything a standard format of mm/dd/yyyy
     df = updateDates(df)
     
+    # If there is no DOD, remove those entries as we won't be able to process them
+    data_new1 = df.copy()
+    data_new1.dropna(inplace = True) 
+    data_new1.reset_index(drop=True, inplace=True)
+    
     # Now let's create a new column that calculates the individuals lifespan
-    #df = addLifespan(df)
-    
+    df = addLifespan(data_new1)
     print(df.to_string())
+    
 
     
     
-
-
 if __name__ == '__main__':
     main()
