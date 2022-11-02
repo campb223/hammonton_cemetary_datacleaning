@@ -397,7 +397,7 @@ def main():
     print("Number of Outliers: "+ str(len(outliers)))
     print("Max Outlier Value: "+ str(outliers.max()))
     print("Min Outlier Value: "+ str(outliers.min()))
-    print(outliers_to_drop)
+    #print(outliers_to_drop)
     
     # Now to remove the specific indexes from df that were provided in outliers_to_drop
     count = 0
@@ -405,24 +405,21 @@ def main():
         df = df.drop(df.index[num-count])
         count += 1
     df.reset_index(inplace=True)
-    print(df.to_string())
+    #print(df.to_string())
+
+    # Grouping by year of birth
+    tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
+    print(tempVar1)
+    
+    #tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min', 'max'])
+    #print(tempVar2)
+    
+    # Now let's calcuate the averages
+    totalPerGroup = set()
+    for dob in tempVar1['DOBYear']:
+        totalPerGroup.add({dob, 0})
     
     
-    
-    
-    
-    
-    #tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
-    #tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min','max'])
-    #print(tempVar1)
-    
-    
-    #tempVar = df.groupedDF.sort_values('DOBYear', ascending=True)
-    #print(tempVar)
-    
-    #years = df.groupby(by=['DOBYear'], sort=True)
-    #print(years)
-    #years.first()
     
     
 if __name__ == '__main__':
