@@ -5,12 +5,9 @@
 ############################################
 
 # Let's import libaries we'll need
-from cmath import nan
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from dateutil.parser import parse
-from dateutil import relativedelta
 #import matplotlib as plt
 
 def splitNamesColumn(dfc):
@@ -140,14 +137,10 @@ def addLifespan(df):
     
     for dateOfBirth in df["DOBYear"]:
         # Grab the DOB and DOD as variables
-        #birth = datetime.strptime(str(df["DOBYear"][counter]), '%Y')
-        #death = datetime.strptime(str(df["DODYear"][counter]), '%Y')
         birth = df["DOBYear"][counter]
         death = df["DODYear"][counter]
         # Find the difference in death - birth
         diff = int(death) - int(birth)
-        #diff = relativedelta.relativedelta(death, birth)
-        # Save the difference in years
         lifespan.append(diff)
         counter += 1
     
@@ -345,6 +338,26 @@ def cleanDataC(dfc):
     
     return dfc
 
+def find_Z_Score(df):
+    """ Credit to the website below for showing how to use the .quantile() function to calculate some outliers
+    https://careerfoundry.com/en/blog/data-analytics/how-to-find-outliers/#:~:text=Finding%20outliers%20using%20statistical%20methods,-Since%20the%20data&text=Using%20the%20IQR%2C%20the%20outlier,Q1%20(Q3%E2%80%93Q1).
+
+    Args:
+        df (Dataframe): 
+
+    Returns:
+       [outliers, not_outliers, outliers_dropped]: Returns which values are outliers, not outliers, and which ones were dropped
+    """
+    q1 = df['Lifespan'].quantile(0.25)
+    q3 = df['Lifespan'].quantile(0.75)
+    IQR = q3-q1
+    
+    outliers = df['Lifespan'][((df['Lifespan']<(q1-1.5*IQR)) | (df['Lifespan']>(q3+1.5*IQR)))]
+    not_outliers = df['Lifespan'][~((df['Lifespan']<(q1-1.5*IQR)) | (df['Lifespan']>(q3+1.5*IQR)))]
+    outliers_dropped = outliers.dropna().reset_index()
+    
+    return [outliers, not_outliers, outliers_dropped]
+
 def main():
     # First we'll clean our data so we can begin to visualize the average lifespan over time. 
     
@@ -367,7 +380,6 @@ def main():
     
     # Now that each of our dataframes are in the desired format -- let's merge them into one dataframe
     df = pd.concat([dfa, dfb, dfc], ignore_index=True)
-    #print(df.to_string())
     
     # For consistency, let's make the gender consistently either 'M' or 'F'
     df = formatGender(df)
@@ -376,9 +388,33 @@ def main():
     df = addLifespan(df)
     #print(df.to_string())
     
-    tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
-    tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min','max'])
-    print(tempVar2)
+    # Calling a function to find outliers. 
+    outliersArr = find_Z_Score(df)
+    outliers = outliersArr[0]
+    not_outliers = outliersArr[1]
+    outliers_to_drop = outliersArr[2]
+
+    print("Number of Outliers: "+ str(len(outliers)))
+    print("Max Outlier Value: "+ str(outliers.max()))
+    print("Min Outlier Value: "+ str(outliers.min()))
+    print(outliers_to_drop)
+    
+    # Now to remove the specific indexes from df that were provided in outliers_to_drop
+    count = 0
+    for num in outliers_to_drop["index"]:
+        df = df.drop(df.index[num-count])
+        count += 1
+    df.reset_index(inplace=True)
+    print(df.to_string())
+    
+    
+    
+    
+    
+    
+    #tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
+    #tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min','max'])
+    #print(tempVar1)
     
     
     #tempVar = df.groupedDF.sort_values('DOBYear', ascending=True)
