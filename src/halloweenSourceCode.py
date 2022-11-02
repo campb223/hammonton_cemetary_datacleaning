@@ -23,10 +23,8 @@ def splitNamesColumn(dfc):
     Returns:
         newdf (Pandas DataFrame): Dataframe with two columns for firstName and lastName (as well as other columns)
     """
-    
     first = []
     last = []
-    
     # There are a few cases we'll run into with splitting up names into firstName / lastName
     for name in dfc["Name"]:
         # Initally we'll split the names
@@ -86,13 +84,12 @@ def correctColNames(df):
     Returns:
         newdf (Pandas DataFrame): dataframe with the proper column names 
     """
-    
     # Here we'll init an empty dataframe and explicitly label the columns in our desired format
     newdf = pd.DataFrame()
     newdf["firstName"] = df.iloc[:,0]
     newdf["lastName"] = df.iloc[:,1]
-    newdf["DOB"] = df.iloc[:,2]
-    newdf["DOD"] = df.iloc[:,3]
+    newdf["DOBYear"] = df.iloc[:,2]
+    newdf["DODYear"] = df.iloc[:,3]
     newdf["Sex"] = df.iloc[:,4]
     
     # Finally return the dataframe
@@ -109,7 +106,6 @@ def formatGender(df):
     Returns:
         df (Pandas DataFrame): dataframe with male = 'M' and female = 'F'
     """
-    
     gender = []
     for sex in df["Sex"]:
         # Let's remove any leading spaces from the entry
@@ -130,143 +126,6 @@ def formatGender(df):
     # Finally return the dataframe
     return df
 
-def updateDates(df):
-    """The function is intended to update the date for DOB and DOD on the provided dataframe. 
-    
-    I've identified at least the following formats to be present:
-       NaN, 1930, jan 14 1947, 04-03-1921, Jan 1980
-    
-    These seem to be a typo
-        Feb 41993 (we'll assume this to be Feb 4 1993)
-        02/14/000 (we'll assume this to 02/14/1900)
-    
-    If only a year is provided we will format it to 01/01/yyyy
-    If only month and year are provided we will format it to mm/01/yyyy
-
-    Args:
-        df (Pandas DataFrame): Accepts a dataframe with varying date formats for DOB and DOD
-
-    Returns:
-        df (Pandas DataFrame): Returns a dataframe with the DOB and DOD consistently updated to mm/dd/yyyy
-    """
-    
-    newDOB = []
-    newDOD = []
-    
-    # Loop through each DOB
-    for dateOfBirth in df["DOB"]:
-        # Make each DOB a string
-        dateOfBirth = str(dateOfBirth)
-        # If the DOB appears to be a typo, we'll correct it first then continue to loop. 
-        if dateOfBirth == "02/14/000":
-            newDOB.append(datetime.strptime("02/14/1900", '%m/%d/%Y'))
-            continue
-        elif dateOfBirth == " Feb 41993":
-            newDOB.append(datetime.strptime("04/04/1993", '%m/%d/%Y'))
-            continue
-        elif dateOfBirth == "04-03-1921":
-            newDOB.append(datetime.strptime("04/03/1921", '%m/%d/%Y'))
-            continue
-            
-        # Here we'll remove any leading white spaces on the DOB
-        dateOfBirth = str(dateOfBirth).lstrip()
-
-        # If the DOB is null -- add an empty entry
-        if pd.isna(str(dateOfBirth)) or dateOfBirth == "nan":
-            newDOB.append("")
-        # If the length of the string = 4, we'll assume only a year is provided and return 01/01/yyyy
-        elif len(str(dateOfBirth)) == 4:
-            dateOfBirth = "01/01/" + dateOfBirth
-            newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
-        # Otherwise we'll need to do some additional formatting to get mm/dd/yyyy
-        else:
-            # Attempting to just convert to mm/dd/yyyy
-            try:
-                newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
-            except:
-                try:
-                    newDOB.append(datetime.strptime(str(dateOfBirth), '%b/%d/%Y'))
-                except:
-                    # If that failed, try to capitalize the first letter and see how many times it split
-                    tempDateOfBirth = str(dateOfBirth).capitalize()
-                    strSplit = tempDateOfBirth.split()
-                    # If split = 2 then it's like Sept 1900
-                    if len(strSplit) == 2:
-                        if(strSplit[0] == "Sept"):
-                            tempDateOfBirth = "Sep"
-                            newTempStr = tempDateOfBirth + "/01/" + strSplit[1]
-                        else:
-                            newTempStr = strSplit[0] + "/01/" + strSplit[1]
-                        try:
-                            newDOB.append(datetime.strptime(newTempStr, '%b/%d/%Y'))
-                        except:
-                            newDOB.append(datetime.strptime(newTempStr, '%B/%d/%Y'))
-                            continue
-                    elif len(strSplit) == 3:
-                        try:
-                            if len(strSplit[1]) == 2:
-                                newTempStr = strSplit[0] + "/" + strSplit[1][0] + strSplit[1][1]  + "/" + strSplit[2]
-                            else:
-                                newTempStr = strSplit[0] + "/0" + strSplit[1][0] + "/" + strSplit[2]
-                            newDOB.append(datetime.strptime(str(newTempStr), '%b/%d/%Y'))
-                        except:
-                            newDOB.append(datetime.strptime(str(newTempStr), '%B/%d/%Y'))
-                                            
-    for dateOfDeath in df["DOD"]:
-        
-        # If the DOB appears to be a typo, we'll correct it first then continue to loop. 
-        if dateOfDeath == "11/00/0000":
-            newDOD.append("")
-            continue
-        
-        dateOfDeath = str(dateOfDeath).lstrip()
-        
-        if pd.isna(dateOfDeath) or dateOfDeath == "nan":
-            newDOD.append("")
-        elif len(dateOfDeath) == 4:
-            dateOfDeath = "01/01/" + dateOfDeath
-            newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
-        else:
-            # Attempting to just convert to mm/dd/yyyy
-            try:
-                newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
-            except:
-                try:
-                    newDOD.append(datetime.strptime(str(dateOfDeath), '%b/%d/%Y'))
-                except:
-                    # If that failed, try to capitalize the first letter and see how many times it split
-                    tempDateOfDeath = str(dateOfDeath).capitalize()
-                    strSplit = tempDateOfDeath.split()
-                    # If split = 2 then it's like Sept 1900
-                    if len(strSplit) == 2:
-                        if(strSplit[0] == "Sept"):
-                            tempDateOfDeath = "Sep"
-                            newTempStr = tempDateOfDeath + "/01/" + strSplit[1]
-                        else:
-                            newTempStr = strSplit[0] + "/01/" + strSplit[1]
-                        try:
-                            newDOD.append(datetime.strptime(newTempStr, '%b/%d/%Y'))
-                        except:
-                            newDOD.append(datetime.strptime(newTempStr, '%B/%d/%Y'))
-                            continue
-                    elif len(strSplit) == 3:
-                        try:
-                            if len(strSplit[1]) == 2:
-                                newTempStr = strSplit[0] + "/" + strSplit[1][0] + strSplit[1][1]  + "/" + strSplit[2]
-                            else:
-                                newTempStr = strSplit[0] + "/0" + strSplit[1][0] + "/" + strSplit[2]
-                            newDOD.append(datetime.strptime(str(newTempStr), '%b/%d/%Y'))
-                        except:
-                            newDOD.append(datetime.strptime(str(newTempStr), '%B/%d/%Y'))
-    
-    # Now we can update our DOB and DOD with our formatted datetime objects. 
-    df["DOB"] = pd.DataFrame(newDOB)
-    df["DOD"] = pd.DataFrame(newDOD)
-    
-    # Finally return the dataframe
-    return df
-        
-
 def addLifespan(df):
     """This function takes in a dataframe, adds a column calcuating the death-birth to generate a lifespan. Then returns the new dataframe
 
@@ -276,46 +135,230 @@ def addLifespan(df):
     Returns:
         df (Pandas DataFrame): The same dataframe with one extra column for "lifespan"
     """
-    
     lifespan = []
     counter = 0
     
-    for dateOfBirth in df["DOB"]:
+    for dateOfBirth in df["DOBYear"]:
         # Grab the DOB and DOD as variables
-        birth = df["DOB"][counter]
-        death = df["DOD"][counter]
+        #birth = datetime.strptime(str(df["DOBYear"][counter]), '%Y')
+        #death = datetime.strptime(str(df["DODYear"][counter]), '%Y')
+        birth = df["DOBYear"][counter]
+        death = df["DODYear"][counter]
         # Find the difference in death - birth
-        diff = relativedelta.relativedelta(death, birth)
+        diff = int(death) - int(birth)
+        #diff = relativedelta.relativedelta(death, birth)
         # Save the difference in years
-        lifespan.append(diff.years)
+        lifespan.append(diff)
         counter += 1
     
     # Finally we can add the lifespan as a new column and return the dataframe
     df["Lifespan"] = pd.DataFrame(lifespan)
     return df
 
+def cleanDataA(dfa):
+    """ Takes in a dataframe, removes empty data, adds an empty column for "Sex", then changes the DOB and DOD into just a year format
 
-def main():
-    # Let's read in each of the CSV files to their own dataframes
-    dfa = pd.read_csv('data\halloween2019a.csv')
-    dfb = pd.read_csv('data\halloween2019b.csv')
-    dfc = pd.read_csv('data\halloween2019c.csv')
-    
-    # Our data is in the following formats:
-    #             halloween2019a.csv            #           halloween2019b.csv           #   halloween2019c.csv 
-    #   FirstName,MiddleName,LastName,DOB,DOD   #   FirstName, LastName, DOB, DOD, Sex   #    Name,DOB,DOD,Sex
-    
-    # Let's prepare a format that's consitent which disregards any middle names (firstName,lastName,DOB,DOD,Sex)
-    
-    # Removing MiddleName from dataframe A
+    Args:
+        dfa (Pandas DataFrame): Dataframe with --> FirstName,MiddleName,LastName,DOB,DOD
+
+    Returns:
+        dfa (Pandas DataFrame): Dataframe with --> FirstName,LastName,DOB,DOD,Sex
+    """
+    # Removing MiddleName from dataframe A then 
     dfa.pop("MiddleName")
-
-    # Adding Empty column for "Sex" to dataframe A 
+    
+    # Dropping NA values
+    dfa.dropna(inplace = True) 
+    dfa.reset_index(drop=True, inplace=True)
+    
+    # Adding Empty column for "Sex" 
     dfa["Sex"] = ""
+    
+    # Now let's clean the messed up datetime values in DOB
+    newDOB = []
+    for dateOfBirth in dfa['DOB']:
+        # There are a few weird dates we need to clean:
+        #   02/14/000  --> 02/14/1900
+        #   Feb 41993  --> 04/04/1993
+        #   04-03-1921 --> 04/03/1921
+        if dateOfBirth == "02/14/000":
+            newDOB.append(datetime.strptime("02/14/1900", '%m/%d/%Y'))
+        elif dateOfBirth == " Feb 41993":
+            newDOB.append(datetime.strptime("04/04/1993", '%m/%d/%Y'))
+        elif dateOfBirth == "04-03-1921":
+            newDOB.append(datetime.strptime("04/03/1921", '%m/%d/%Y'))
+        else:
+            newDOB.append(dateOfBirth)
+    
+    # Now let's clean the messed up datetime values in DOD
+    newDOD = []
+    for dateOfDeath in dfa['DOD']:
+        # 11/00/0000 --> 11/01/2000"
+        if dateOfDeath == "11/00/0000":
+            newDOD.append(datetime.strptime("11/01/2000", '%m/%d/%Y'))
+        else:
+            newDOD.append(dateOfDeath)
+    
+    # Combining newDOB and newDOD into DataFrames        
+    dfa['DOB'] = pd.DataFrame(newDOB)
+    dfa['DOD'] = pd.DataFrame(newDOD)
+    
+    # Adding the datetime formate to these columns
+    dfa['DOB'] = pd.to_datetime(dfa['DOB'])
+    dfa['DOD'] = pd.to_datetime(dfa['DOD'])
+    
+    # Now loop through to get just the years from DOB and DOD
+    counter = 0
+    birth = []
+    death = []
+    for dateOfBirth in dfa['DOB']:
+        birth.append(dfa["DOB"][counter].year)
+        death.append(dfa["DOD"][counter].year)
+        counter += 1
+    dfa['DOB'] = pd.DataFrame(birth)
+    dfa['DOD'] = pd.DataFrame(death)
+    return dfa
 
-    # Dataframe B is in the format we desire 
+def cleanDataB(dfb):
+    """ Takes in a dataframe, removes empty data, then changes the DOB and DOD into just a year format
+
+    Args:
+        dfb (Pandas DataFrame): Dataframe with --> FirstName, LastName, DOB, DOD, Sex
+
+    Returns:
+        dfb (Pandas DataFrame): Dataframe with --> firstName,lastName,DOB,DOD,Sex
+    """
+    # Dropping NA values
+    dfb.dropna(inplace = True) 
+    dfb.reset_index(drop=True, inplace=True)
+    
+    # Now let's clean the messed up datetime values in DOB
+    newDOB = []
+    for dateOfBirth in dfb[' DOB']:
+        # If there are only 4 numbers, then only year is provided. Add a temp 01/01 placeholder
+        if len(str(dateOfBirth)) == 4:
+            dateOfBirth = "01/01/" + dateOfBirth
+            newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
+        else:
+            newDOB.append(dateOfBirth)
+            
+    # Now let's clean the messed up datetime values in DOD
+    newDOD = []
+    for dateOfDeath in dfb[' DOD']:
+         # If there are only 4 numbers, then only year is provided. Add a temp 01/01 placeholder
+        if len(str(dateOfDeath)) == 4:
+            dateOfDeath = "01/01/" + dateOfDeath
+            newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
+        else:
+            newDOD.append(dateOfDeath)
+            
+    # Combining newDOB and newDOD into DataFrames 
+    dfb[' DOB'] = pd.DataFrame(newDOB)
+    dfb[' DOD'] = pd.DataFrame(newDOD)
+    
+    # Adding the datetime formate to these columns
+    dfb['DOB'] = pd.to_datetime(dfb[' DOB'])
+    dfb['DOD'] = pd.to_datetime(dfb[' DOD'])
+    
+    # Now loop through to get just the years from DOB and DOD
+    counter = 0
+    birth = []
+    death = []
+    for dateOfBirth in dfb['DOB']:
+        birth.append(dfb["DOB"][counter].year)
+        death.append(dfb["DOD"][counter].year)
+        counter += 1
+    dfb['DOB'] = pd.DataFrame(birth)
+    dfb['DOD'] = pd.DataFrame(death)
+    
+    # Remove the two columns that are ' DOB' and ' DOD'
+    dfb.pop(" DOB")
+    dfb.pop(" DOD")
+    
+    # To keep a consistent format we'll return a new dataframe
+    newdf = pd.DataFrame()
+    newdf["firstName"] = dfb["FirstName"]
+    newdf["lastName"] = dfb[" LastName"]
+    newdf["DOB"] = dfb["DOB"]
+    newdf["DOD"] = dfb["DOD"]
+    newdf["Sex"] = dfb[" Sex"]
+    
+    # Finally return the dataframe
+    return newdf
+    
+def cleanDataC(dfc):
+    """ Takes in a dataframe, removes empty data, turns 'Names' into firstName & lastName, then changes the DOB and DOD into just a year format
+
+    Args:
+        dfc (Pandas DataFrame): Dataframe with --> Name,DOB,DOD,Sex
+
+    Returns:
+        dfc (Pandas DataFrame): Dataframe with --> firstName,lastName,DOB,DOD,Sex
+    """
+    # Dropping NA values
+    dfc.dropna(inplace = True) 
+    dfc.reset_index(drop=True, inplace=True)
+    
     # Dataframe C needs the names split up
     dfc = splitNamesColumn(dfc)
+    
+    # Now let's clean the messed up datetime values in DOB
+    newDOB = []
+    for dateOfBirth in dfc['DOB']:
+        # If there are only 4 numbers, then only year is provided. Add a temp 01/01 placeholder
+        if len(str(dateOfBirth)) == 4:
+            dateOfBirth = "01/01/" + dateOfBirth
+            newDOB.append(dateOfBirth)
+            #newDOB.append(datetime.strptime(str(dateOfBirth), '%m/%d/%Y'))
+        else:
+            newDOB.append(dateOfBirth)
+            
+    # Now let's clean the messed up datetime values in DOD
+    newDOD = []
+    for dateOfDeath in dfc['DOD']:
+         # If there are only 4 numbers, then only year is provided. Add a temp 01/01 placeholder
+        if len(str(dateOfDeath)) == 4:
+            dateOfDeath = "01/01/" + dateOfDeath
+            newDOD.append(dateOfDeath)
+            #newDOD.append(datetime.strptime(str(dateOfDeath), '%m/%d/%Y'))
+        else:
+            newDOD.append(dateOfDeath)
+            
+    # Combining newDOB and newDOD into DataFrames 
+    dfc['DOB'] = pd.DataFrame(newDOB)
+    dfc['DOD'] = pd.DataFrame(newDOD)
+    
+    # Adding the datetime formate to these columns
+    dfc['DOB'] = pd.to_datetime(dfc['DOB'])
+    dfc['DOD'] = pd.to_datetime(dfc['DOD'])
+    
+    # Now loop through to get just the years from DOB and DOD
+    counter = 0
+    birth = []
+    death = []
+    for dateOfBirth in dfc['DOB']:
+        birth.append(dfc["DOB"][counter].year)
+        death.append(dfc["DOD"][counter].year)
+        counter += 1
+    dfc['DOB'] = pd.DataFrame(birth)
+    dfc['DOD'] = pd.DataFrame(death)
+    
+    return dfc
+
+def main():
+    # First we'll clean our data so we can begin to visualize the average lifespan over time. 
+    
+    # Cleaning dataset A
+    dfa = pd.read_csv('data\halloween2019a.csv')
+    dfa = cleanDataA(dfa)
+   
+    # Cleaning dataset B
+    dfb = pd.read_csv('data\halloween2019b.csv')
+    dfb = cleanDataB(dfb)
+    
+    # Cleaning dataset C
+    dfc = pd.read_csv('data\halloween2019c.csv')
+    dfc = cleanDataC(dfc)
     
     # Let's pass each dataframe to ensure column names are in our desired format
     dfa = correctColNames(dfa)
@@ -324,24 +367,26 @@ def main():
     
     # Now that each of our dataframes are in the desired format -- let's merge them into one dataframe
     df = pd.concat([dfa, dfb, dfc], ignore_index=True)
+    #print(df.to_string())
     
-    # Some results have 'Male'/'Female' whereas some have 'm'/'M'/'f'/'F' 
-    # For consistency, let's make these either 'M' or 'F'
+    # For consistency, let's make the gender consistently either 'M' or 'F'
     df = formatGender(df)
     
-    # Our dates are very inconsistent, let's make everything a standard format of mm/dd/yyyy
-    df = updateDates(df)
-    
-    # If there is no DOD, remove those entries as we won't be able to process them
-    data_new1 = df.copy()
-    data_new1.dropna(inplace = True) 
-    data_new1.reset_index(drop=True, inplace=True)
-    
     # Now let's create a new column that calculates the individuals lifespan
-    df = addLifespan(data_new1)
-    print(df.to_string())
+    df = addLifespan(df)
+    #print(df.to_string())
     
-
+    tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
+    tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min','max'])
+    print(tempVar2)
+    
+    
+    #tempVar = df.groupedDF.sort_values('DOBYear', ascending=True)
+    #print(tempVar)
+    
+    #years = df.groupby(by=['DOBYear'], sort=True)
+    #print(years)
+    #years.first()
     
     
 if __name__ == '__main__':
