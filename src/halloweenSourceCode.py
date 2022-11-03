@@ -8,7 +8,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
-#import matplotlib as plt
+import matplotlib.pyplot as plt 
 
 def splitNamesColumn(dfc):
     """In the dataframe provived there is one column labeled "Name" -- this function grabs the first and last (if available) names,
@@ -115,7 +115,7 @@ def formatGender(df):
             gender.append('F')
         # Otherwise, it's a blank entry. 
         else:
-            gender.append('')
+            gender.append(None)
             
     # Here we re-write to the column "Sex" with our consistently labaled gender format
     df["Sex"] = pd.DataFrame(gender)
@@ -381,12 +381,13 @@ def main():
     # Now that each of our dataframes are in the desired format -- let's merge them into one dataframe
     df = pd.concat([dfa, dfb, dfc], ignore_index=True)
     
-    # For consistency, let's make the gender consistently either 'M' or 'F'
+    # For consistency, let's make the gender consistently either 'M' or 'F' and remove entires with empty genders
     df = formatGender(df)
+    df.dropna(inplace = True) 
+    df.reset_index(drop=True, inplace=True)
     
-    # Now let's create a new column that calculates the individuals lifespan
+    # Now let's create a new column that calculates the individuals lifespan 
     df = addLifespan(df)
-    #print(df.to_string())
     
     # Calling a function to find outliers. 
     outliersArr = find_Z_Score(df)
@@ -394,9 +395,9 @@ def main():
     not_outliers = outliersArr[1]
     outliers_to_drop = outliersArr[2]
 
-    print("Number of Outliers: "+ str(len(outliers)))
-    print("Max Outlier Value: "+ str(outliers.max()))
-    print("Min Outlier Value: "+ str(outliers.min()))
+    #print("Number of Outliers: "+ str(len(outliers)))
+    #print("Max Outlier Value: "+ str(outliers.max()))
+    #print("Min Outlier Value: "+ str(outliers.min()))
     #print(outliers_to_drop)
     
     # Now to remove the specific indexes from df that were provided in outliers_to_drop
@@ -408,16 +409,32 @@ def main():
     #print(df.to_string())
 
     # Grouping by year of birth
-    tempVar1 = df.groupby(by=['DOBYear'], sort=True).sum()
-    print(tempVar1)
+    grouped = df.groupby(by=['DOBYear'], sort=True)
+
+    # Calculating lifespan for each birth year and saving to a df
+    birthYear = []
+    lifespan = []
+    for name,group in grouped:
+        sum = 0
+        members = 0
+        for lifeSp in group['Lifespan']:
+            members += 1
+            sum += int(lifeSp)
+        birthYear.append(str(name))
+        lifespan.append(round((int(sum)/int(members)), 2))
     
-    #tempVar2 = df.groupby(by=['DOBYear'], sort=True).aggregate(['min', 'max'])
-    #print(tempVar2)
     
-    # Now let's calcuate the averages
-    totalPerGroup = set()
-    for dob in tempVar1['DOBYear']:
-        totalPerGroup.add({dob, 0})
+    dfFinal = pd.DataFrame()
+    dfFinal['YOB'] = pd.DataFrame(birthYear)
+    dfFinal['Lifespan'] = pd.DataFrame(lifespan)
+    
+    # Plotting Lifespan vs YOB
+    plt.title("Lifespan vs Year of Birth")
+    plt.xlabel('Year of Birth')
+    plt.ylabel('Lifespan')
+    plt.bar(dfFinal['YOB'],dfFinal['Lifespan']) 
+    plt.xticks(rotation=90)
+    plt.show()
     
     
     
