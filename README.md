@@ -1,12 +1,8 @@
-# hammonton_cemetary_datacleaning
-DSSA 5102 - Halloween Assignment
+# DSSA 5102 - Halloween Assignment
 
-# Reformatted Problem Description:
-To solve this question you need to use a library like pandas in python for working with data frames.
-
+## Reformatted Problem Description:
 Answer the following question about the cemetary data files:
 What is the average (or median) life span for men and women by year?
-
 
 ## Goals of Source Code
 1. Combine all the previous year's files with your own collected data into a DataFrame.
@@ -21,3 +17,7 @@ What is the average (or median) life span for men and women by year?
 ### Note:
 Each line of code needs to have a comment explaining what your code is doing.
 Also, try to graph the result using a python library like matplotlib, seaborn, or plotly (a basic bar chart is fine) and include a png of your chart in your repository.
+
+
+# Final Visualization
+![dataVisualized](https://user-images.githubusercontent.com/113140416/199634213-96d9f98f-fc84-4355-b8a1-500335921a36.png)
